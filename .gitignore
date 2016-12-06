@@ -1,5 +1,6 @@
 # Ignores specific to this project
 *.xlsx
+config.py
 
 # Environment-specific items
 .vscode/
