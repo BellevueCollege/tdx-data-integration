@@ -60,7 +60,7 @@ workbook = xlsxwriter.Workbook(file_name)
 worksheet = workbook.add_worksheet()
 
 add_headers = ['User Type','Username','Authentication Provider','Authentication Username','Security Role','First Name','Last Name','Organization','Title','Acct/Dept','Organizational ID','Is Employee','Primary Email','Alert Email','Work Phone','Work Postal Code','Time Zone ID','HasTDKnowledgeBase','HasTDRequests','HasTDTicketRequests','Is Student']
-update_headers = ['Username','Authentication Username','First Name','Last Name','Organization','Title','Acct/Dept','Organizational ID','Is Employee','Primary Email','Alert Email','Work Phone','Work Address','Work Postal Code','Time Zone ID','Is Student']
+update_headers = ['Username','Authentication Username','First Name','Last Name','Organization','Title','Acct/Dept','Organizational ID','Is Employee','Primary Email','Alert Email','Work Phone','Work Postal Code','Time Zone ID','Is Student']
 headers_employee_only = ['Work Address','Department ID','Reports To Username']
 
 
@@ -91,10 +91,12 @@ try:
             write_row = 1
             for row in cursor:
                 write_col = 0
+
                 if file_type == config.filetype_add:
                     worksheet.write(write_row, write_col, row['User Type'])
+                    increment_column()
                 
-                worksheet.write(write_row, increment_column(), row['Username'])
+                worksheet.write(write_row, write_col, row['Username'])
 
                 if file_type == config.filetype_add:
                     worksheet.write(write_row, increment_column(), row['Authentication Provider'])
@@ -132,7 +134,7 @@ try:
                     if file_type == config.filetype_add:
                         worksheet.write(write_row, increment_column(), '')
                     else:
-                        worksheet.write(write_row, increment_column(), row['Reports to Username'])
+                        worksheet.write(write_row, increment_column(), row['Reports To Username'])
 
                 write_row += 1
 
