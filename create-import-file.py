@@ -3,6 +3,7 @@ import datetime
 import xlsxwriter
 import argparse
 import logging
+import tdapi
 
 import config
 
@@ -55,7 +56,7 @@ today = datetime.date.today()
 #print today
 #print user_type
 
-file_name = user_type + '-' + file_type + '-import-' + str(today) + '.xlsx'
+file_name = str(today) + '-' + user_type + '-' + file_type + '-import.xlsx'
 workbook = xlsxwriter.Workbook(file_name)
 worksheet = workbook.add_worksheet()
 
@@ -144,4 +145,5 @@ except Exception, e:
     logger.exception("Error connecting to db or writing to worksheet")
 
 workbook.close()
+
 #print dir(conn)
