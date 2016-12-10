@@ -35,6 +35,7 @@ End functions used
 parser = argparse.ArgumentParser()
 parser.add_argument('--filetype', help='add or update. Default is update.')
 parser.add_argument('--usertype', help='employee or student. Default is employee.')
+parser.add_argument('-d', '--dry', action='store_true', help='With this option file is generated but not sent to TDX import endpoint.')
 args = parser.parse_args()
 
 # Set import file type
@@ -51,10 +52,7 @@ if args.usertype is not None and args.usertype in [config.usertype_employee, con
 else:
     logger.warn("Invalid usertype provided. Default value used.")
 
-today = datetime.date.today()
-#print file_type
-#print today
-#print user_type
+today = datetime.datetime.now().strftime('%Y-%m-%d.%H%M%S')
 
 file_name = str(today) + '-' + user_type + '-' + file_type + '-import.xlsx'
 workbook = xlsxwriter.Workbook(file_name)
@@ -84,9 +82,11 @@ try:
 
             # select the correct data
             if user_type == config.usertype_employee:
-                cursor.execute('SELECT * from vw_Employees')
+                cursor.execute('SELECT * FROM vw_Employees')
+                #cursor.execute('SELECT TOP 15 * FROM vw_Employees ORDER BY [Last Name], [First Name]')
             else:
-                cursor.execute('SELECT * from vw_Students')
+                cursor.execute('SELECT * FROM vw_Students')
+                #cursor.execute('SELECT TOP 15 * FROM vw_Students ORDER BY [Last Name], [First Name]')
 
             # process the data
             write_row = 1
@@ -139,11 +139,37 @@ try:
 
                 write_row += 1
 
-except Exception, e:
+except Exception as e:
     #print "Error ", sys.exc_info()[0].message
-    print "Error: ", e.args[0]
+    #print "Error: ", e.args[0]
     logger.exception("Error connecting to db or writing to worksheet")
 
 workbook.close()
 
-#print dir(conn)
+# If this is not a dry run, then upload file to TDX import file endpoint
+if args.dry is not None and args.dry is False:
+    #print 'Uploading file...'
+
+    try:
+        # create file handle (read, binary)
+        xlsx_fh = open(file_name, 'rb')
+
+        # create TDX connection
+        td_conn = tdapi.TDConnection(BEID=config.tdx_web_services_beid,
+                                    WebServicesKey=config.tdx_web_services_key,
+                                    sandbox=True,
+                                    url_root=config.tdx_web_api_root)
+        tdapi.TD_CONNECTION = td_conn
+
+        #print dir(tdapi.TD_CONNECTION)
+        
+        files = {file_name: (file_name,
+                                xlsx_fh,
+                                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )}
+
+        td_conn.files_request(method='post',
+                            url_stem='people/import',
+                            files=files)
+    except Exception as e:
+        logger.exception("Error connecting to TeamDynamix and/or writing file to endpoint")
