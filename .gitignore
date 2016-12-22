@@ -1,6 +1,10 @@
 # Ignores specific to this project
 *.xlsx
 config.py
+*.sqlite
+
+# Ignore dumb Mac files
+.DS_Store
 
 # Environment-specific items
 .vscode/
