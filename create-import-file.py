@@ -35,6 +35,7 @@ End functions used
 parser = argparse.ArgumentParser()
 parser.add_argument('--filetype', help='add or update. Default is update.')
 parser.add_argument('--usertype', help='employee or student. Default is employee.')
+parser.add_argument('--split', help='Specify a certain user type split. Only valid for a student usertype.')
 parser.add_argument('-d', '--dry', action='store_true', help='With this option file is generated but not sent to TDX import endpoint.')
 args = parser.parse_args()
 
@@ -52,6 +53,10 @@ if args.usertype is not None and args.usertype in [config.usertype_employee, con
 else:
     logger.warn("Invalid usertype provided. Default value used.")
 
+user_split = None
+if args.split is not None and user_type == config.usertype_student and args.split.isdigit() and int(args.split) < len(config.user_splits_student):
+    user_split = int(args.split)
+
 today = datetime.datetime.now().strftime('%Y-%m-%d.%H%M%S')
 
 file_name = str(today) + '-' + user_type + '-' + file_type + '-import.xlsx'
@@ -61,7 +66,6 @@ worksheet = workbook.add_worksheet()
 add_headers = ['User Type','Username','Authentication Provider','Authentication Username','Security Role','First Name','Last Name','Organization','Title','Acct/Dept','Organizational ID','Is Employee','Primary Email','Alert Email','Work Phone','Work Postal Code','Time Zone ID','HasTDKnowledgeBase','HasTDRequests','HasTDTicketRequests','Is Student']
 update_headers = ['Username','Authentication Username','First Name','Last Name','Organization','Title','Acct/Dept','Organizational ID','Is Employee','Primary Email','Alert Email','Work Phone','Work Postal Code','Time Zone ID','Is Student']
 headers_employee_only = ['Work Address','Department ID','Reports To Username']
-
 
 # Add headers specific to employe user type
 if user_type == config.usertype_employee:
@@ -83,10 +87,15 @@ try:
             # select the correct data
             if user_type == config.usertype_employee:
                 cursor.execute('SELECT * FROM vw_Employees')
-                #cursor.execute('SELECT TOP 15 * FROM vw_Employees ORDER BY [Last Name], [First Name]')
+                #cursor.execute('SELECT TOP 150 * FROM vw_Employees ORDER BY [Last Name], [First Name]')
             else:
-                cursor.execute('SELECT * FROM vw_Students')
-                #cursor.execute('SELECT TOP 15 * FROM vw_Students ORDER BY [Last Name], [First Name]')
+                if user_split is not None:
+                    sql_query = "SELECT * FROM vw_Students WHERE [Last Name] LIKE '[{}]%' ORDER BY [Last Name] asc".format(config.user_splits_student[user_split])
+                else:
+                    sql_query = "SELECT * FROM vw_Students"
+                #print sql_query
+                cursor.execute(sql_query)
+                #cursor.execute('SELECT TOP 150 * FROM vw_Students ORDER BY [Last Name], [First Name]')
 
             # process the data
             write_row = 1
