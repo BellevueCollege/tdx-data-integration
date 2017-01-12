@@ -87,7 +87,6 @@ try:
             # select the correct data
             if user_type == config.usertype_employee:
                 cursor.execute('SELECT * FROM vw_Employees')
-                #cursor.execute('SELECT TOP 150 * FROM vw_Employees ORDER BY [Last Name], [First Name]')
             else:
                 if user_split is not None:
                     sql_query = "SELECT * FROM vw_Students WHERE [Last Name] LIKE '[{}]%' ORDER BY [Last Name] asc".format(config.user_splits_student[user_split])
@@ -95,7 +94,6 @@ try:
                     sql_query = "SELECT * FROM vw_Students"
                 #print sql_query
                 cursor.execute(sql_query)
-                #cursor.execute('SELECT TOP 150 * FROM vw_Students ORDER BY [Last Name], [First Name]')
 
             # process the data
             write_row = 1
@@ -166,7 +164,7 @@ if args.dry is not None and args.dry is False:
         # create TDX connection
         td_conn = tdapi.TDConnection(BEID=config.tdx_web_services_beid,
                                     WebServicesKey=config.tdx_web_services_key,
-                                    sandbox=True,
+                                    sandbox=config.tdx_web_use_sandbox,
                                     url_root=config.tdx_web_api_root)
         tdapi.TD_CONNECTION = td_conn
 
