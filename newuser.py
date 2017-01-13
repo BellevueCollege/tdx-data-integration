@@ -24,7 +24,8 @@ class NewUser():
         data['PrimaryEmail'] = self.primaryemail
         data['AlertEmail'] = self.alertemail
         data['WorkPhone'] = self.workphone
-        data['WorkZip'] = self.workpostal
+        if self.workpostal is not None:
+            data['WorkZip'] = self.workpostal
         data['TZID'] = self.timezone
         data['Applications'] = self.applications
         data['Attributes'] = self.attributes
