@@ -1,0 +1,5 @@
+pymssql==2.1.3
+Xlsxwriter==0.9.3
+
+#Include John Borwick's TDAPI code - can also be local path to your cloned version of the repo
+-e git://github.com/borwick/tdapi.git#egg=tdapi
