@@ -49,18 +49,20 @@ def get_default_security_role():
 
 # get a user by username
 def get_user_by_username(username):
+    
+    user = None
     try:
         user_list = td_conn.json_request_roller(method='post',
                                 url_stem='people/search',
                                 data={'UserName':username})
                                 
-        user = None
         if len(user_list) != 1:
             print 'Did not return a valid user for username: ' + username
         else:
             user = user_list[0]   #get first/only item
     except Exception as e:
-    
+        logger.exception("Error retrieving user by username.")
+
     #print "Reports to user uid: " + str(user['UID'])
     return user
 
@@ -77,7 +79,7 @@ def get_group_by_name(group_name):
     else:
         group = group_list[0]   #get first/only item
 
-    print "Group ID: " + str(group['ID'])
+    #print "Group ID: " + str(group['ID'])
 
     return group
 
@@ -88,6 +90,44 @@ def add_user_to_group(user_uid, group_id):
                     url_stem='people/{}/groups/{}'.format(user_uid, group_id)
                     )
     return grp_response
+
+# get custom person attributes
+def get_custom_attributes_for_people():
+
+    attrs_json = td_conn.json_request_roller(method='get',
+                url_stem='attributes/custom?componentId={}'.format(config.tdx_component_id_person)
+                )
+    
+    return attrs_json
+
+# set custom attribute values for specific user
+def get_custom_attributes_for_user(attrs, user_isstudent, user_dept):
+    
+    custom_attrs = []
+
+    # get Is Student attribute info from custom attributes list
+    isstudent_item = [d for d in attrs if d["Name"] == config.tdx_customattr_isstudent_name][0]
+
+    if isstudent_item is not None:
+        attr_id = isstudent_item["ID"]
+        choices = isstudent_item["Choices"]
+        value = [e for e in choices if e["Name"] == user_isstudent][0]
+
+        #add 
+        custom_attrs.append({ 'ID' : attr_id, 'Value' : value["ID"] })
+        print value["ID"]
+
+    # get Department ID attribute info from custom attributes list
+    if user_dept is not None and user_dept:
+        dept_item = [d for d in attrs if d["Name"] == config.tdx_customattr_deptid_name][0]
+
+        if dept_item is not None:
+            attr_id = dept_item["ID"]
+            custom_attrs.append({ 'ID' : attr_id, 'Value' : user_dept })
+    
+    #return generated custom attributes list
+    return custom_attrs
+
 '''
 #
 # END OF THE FUNCTIONS SECTION
@@ -100,7 +140,7 @@ try:
     # create TDX connection
     td_conn = tdapi.TDConnection(BEID=config.tdx_web_services_beid,
                                 WebServicesKey=config.tdx_web_services_key,
-                                sandbox=True,
+                                sandbox=config.tdx_web_use_sandbox,
                                 url_root=config.tdx_web_api_root)
     tdapi.TD_CONNECTION = td_conn
 
@@ -120,12 +160,15 @@ try:
     stu_acct = get_account_by_name(config.tdx_acct_name_student)
     stu_acct_id = stu_acct['ID']
 
+    #get people custom attributes
+    people_attrs = get_custom_attributes_for_people()
+
     # connect to database
     with pymssql.connect(server=config.server,user=config.user,password=config.password,database=config.database) as conn:
         with conn.cursor(as_dict=True) as cursor:
 
             # execute query
-            cursor.execute('SELECT * FROM vw_NewUsers')
+            cursor.execute('exec dbo.usp_SELECT_NewUsers')
 
             # process the data
             for row in cursor:
@@ -143,38 +186,43 @@ try:
                 user.authusername = row['Authentication Username']
                 user.securityrole = secroleid
                 user.workaddress = row['Work Address']
+                user.reportsto = None
 
                 if row['Is Employee'] == 'T':
                     #set employee-specific items
                     user.isemployee = True
 
                      #get reports to user
-                    rep_user = get_user_by_username(row['Reports To Username'])
-                    if rep_user is not None:
-                        user.reportsto = rep_user['ID']
+                    if row['Reports To Username']:
+                        rep_user = get_user_by_username(row['Reports To Username'])
+                        if rep_user is not None:
+                            user.reportsto = rep_user['ID']
                     user.accountid = emp_acct_id
-                    #set IsStudent
-                    #set Department ID
+
                 else:
                     user.isemployee = False
                     user.accountid = stu_acct_id
-                    #set Is Student
 
-                ''''
-                user.attributes = [ { 'ID' : 25865, 'Value' : 60954 }, { 'ID' : 25858, 'Value' : '11115' } ]
-                '''                  
-                result = td_conn.json_request(method='post',
-                                        url_stem='people',
-                                        data=user.dictify())
-
-                for k,v in result.iteritems():
-                    print k,v
+                user.attributes = get_custom_attributes_for_user(people_attrs, row["Is Student"], row["Department ID"])
+                print 'Processing user ' + user.primaryemail
+                print user.attributes
                 
-                print "New user UID: " + result['UID']
-                uid = result['UID']
+                try:    
+                    result = td_conn.json_request(method='post',
+                                            url_stem='people',
+                                            data=user.dictify())
 
-                if user.isemployee:
-                    add_user_to_group(uid, emp_groupid)
+                    for k,v in result.iteritems():
+                        print k,v
+                    
+                    print "New user UID: " + result['UID']
+                    uid = result['UID']
 
+                    if user.isemployee:
+                        add_user_to_group(uid, emp_groupid)
+                except Exception as e:
+                    #log this user error but don't bomb out other user additions
+                    logger.exception("Error adding user {}: ".format(user.primaryemail) + str(e))
+                
 except Exception as e:
     logger.exception("Error: " + str(e))
