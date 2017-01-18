@@ -115,7 +115,7 @@ def get_custom_attributes_for_user(attrs, user_isstudent, user_dept):
 
         #add 
         custom_attrs.append({ 'ID' : attr_id, 'Value' : value["ID"] })
-        print value["ID"]
+        #print value["ID"]
 
     # get Department ID attribute info from custom attributes list
     if user_dept is not None and user_dept:
@@ -205,17 +205,17 @@ try:
 
                 user.attributes = get_custom_attributes_for_user(people_attrs, row["Is Student"], row["Department ID"])
                 print 'Processing user ' + user.primaryemail
-                print user.attributes
+                #print user.attributes
                 
                 try:    
                     result = td_conn.json_request(method='post',
                                             url_stem='people',
                                             data=user.dictify())
 
-                    for k,v in result.iteritems():
-                        print k,v
+                    #for k,v in result.iteritems():
+                    #    print k,v
                     
-                    print "New user UID: " + result['UID']
+                    #print "New user UID: " + result['UID']
                     uid = result['UID']
 
                     if user.isemployee:
