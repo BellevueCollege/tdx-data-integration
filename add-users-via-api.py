@@ -182,7 +182,11 @@ try:
                 user.title = row['Title']
                 user.orgid = row['Organizational ID']
                 user.workphone = row['Work Phone']
+
+                # Quirk alert: Work postal despite no longer being required in an import file is still 
+                # required when adding a user via the API. So we must set this for both students and employees.
                 user.workpostal = row['Work Postal Code']
+                
                 user.authusername = row['Authentication Username']
                 user.securityrole = secroleid
                 user.workaddress = row['Work Address']
