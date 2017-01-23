@@ -54,7 +54,7 @@ try:
     # create TDX connection
     td_conn = tdapi.TDConnection(BEID=config.tdx_web_services_beid,
                                 WebServicesKey=config.tdx_web_services_key,
-                                sandbox=True,
+                                sandbox=config.tdx_web_use_sandbox,
                                 url_root=config.tdx_web_api_root)
     tdapi.TD_CONNECTION = td_conn
 
