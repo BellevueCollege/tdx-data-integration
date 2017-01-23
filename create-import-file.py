@@ -4,6 +4,7 @@ import xlsxwriter
 import argparse
 import logging
 import tdapi
+import os
 
 import config
 
@@ -37,6 +38,7 @@ parser.add_argument('--filetype', help='add or update. Default is update.')
 parser.add_argument('--usertype', help='employee or student. Default is employee.')
 parser.add_argument('--split', help='Specify a certain user type split. Only valid for a student usertype.')
 parser.add_argument('-d', '--dry', action='store_true', help='With this option file is generated but not sent to TDX import endpoint.')
+parser.add_argument('-k', '--keepfile', action='store_true', help='With this option the generated file is kept locally.')
 args = parser.parse_args()
 
 # Set import file type
@@ -60,6 +62,9 @@ if args.split is not None and user_type == config.usertype_student and args.spli
 today = datetime.datetime.now().strftime('%Y-%m-%d.%H%M%S')
 
 file_name = str(today) + '-' + user_type + '-' + file_type + '-import.xlsx'
+# if a file creation path config value is provided, use that path for the import file
+if config.file_creation_path is not None and config.file_creation_path:
+    file_name = config.file_creation_path + file_name
 workbook = xlsxwriter.Workbook(file_name)
 worksheet = workbook.add_worksheet()
 
@@ -180,3 +185,9 @@ if args.dry is not None and args.dry is False:
                             files=files)
     except Exception as e:
         logger.exception("Error connecting to TeamDynamix and/or writing file to endpoint")
+
+if args.keepfile is not None and args.keepfile is False:
+    try:
+        os.remove(file_name)
+    except Exception as e:
+        logger.exception("Error removing generated import file %s.", file_name)
