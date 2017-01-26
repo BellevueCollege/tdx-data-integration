@@ -129,7 +129,7 @@ if __name__ == '__main__':
 
         # Part #5: remove people who shouldn't be in the group:
         logging.debug("Now removing people")
-        print "Remove {}".format(people_to_remove)
+        #print "Remove {}".format(people_to_remove)
         for person in people_to_remove:
             logging.debug("Removing %s", person)
             # TODO make this more resilient? e.g. if person has
