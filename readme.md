@@ -16,7 +16,9 @@ In general, to use these scripts, you need:
 - Update the `requirements.txt` file. Note that it provides for direct installing of the tdapi package from git. You can also clone the repo locally and update the path in your `requirements.txt` to be the local path.
 - Install project requirements using `pip`.
 	
-	```pip install -r /path/to/requirements.txt```
+	```
+	$ pip install -r /path/to/requirements.txt
+	```
 
 
 ## Import file creation and upload
@@ -31,14 +33,22 @@ This script accepts commandline arguments.
 
 | Argument | Accepted values | Default | Purpose | 
 | --- | --- | --- | --- |
-| --filetype | add, update | update | Specify type of file to generate |
-| --usertype | employee, student | employee | Specify the type of user for which to generate import file | 
+| --filetype | add, update | update | Specify the type of file to generate. |
+| --usertype | employee, student | employee | Specify the type of user for which to generate import file. | 
+| --split | integer | none | This argument is valid only for usertype student. It allows you to specify a specific split of the student population for which to generate an import file. The integer value should be an index of the ```user_splits_student``` list from the config file. Note: indices start at 0.
 | --dry, -d | - | - | A flag that allows for a "dry" run, i.e. the generated file will _not_ be sent to TDX. Without this flag, the file is by default sent to TDX. |
 | --keepfile, -k | - | - | A flag that specifies to keep locally the file generated. Without this flag, the file is by default deleted after it is sent to TDX. |
 
 ####Example usage
+#####Generating an employee file
+
 ```
 $ python /path/to/create-import-file.py --filetype add --usertype employee -d -k
+```
+#####Generating a student file
+
+```
+$ python /path/to/create-import-file.py --filetype add --usertype student --split 0 -d -k
 ```
 
 ## Add users via API
@@ -71,6 +81,6 @@ This script updates BC-specified TDX user groups based on user field available i
 
 ####Example usage
 ```
-$ python update-groups.py
+$ python /path/to/update-groups.py
 ```
 
