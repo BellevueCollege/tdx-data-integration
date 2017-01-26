@@ -2,11 +2,12 @@ import pymssql
 import datetime
 import argparse
 import logging
-import tdapi
+#import tdapi
 
 import config
 
-from newuser import NewUser
+from modules.newuser import NewUser
+from modules.tdx import TDX
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(format='%(asctime)s %(module)s %(levelname)s: %(message)s',
@@ -16,6 +17,7 @@ logging.basicConfig(format='%(asctime)s %(module)s %(levelname)s: %(message)s',
 #
 # WELCOME TO THE FUNCTIONS SECTION
 #
+'''
 '''
 # get acct/dept by name
 def get_account_by_name(acct_name):
@@ -127,7 +129,7 @@ def get_custom_attributes_for_user(attrs, user_isstudent, user_dept):
     
     #return generated custom attributes list
     return custom_attrs
-
+'''
 '''
 #
 # END OF THE FUNCTIONS SECTION
@@ -137,31 +139,26 @@ def get_custom_attributes_for_user(attrs, user_isstudent, user_dept):
 
 try:
 
-    # create TDX connection
-    td_conn = tdapi.TDConnection(BEID=config.tdx_web_services_beid,
-                                WebServicesKey=config.tdx_web_services_key,
-                                sandbox=config.tdx_web_use_sandbox,
-                                url_root=config.tdx_web_api_root)
-    tdapi.TD_CONNECTION = td_conn
+    tdx = TDX()
 
     # get default security role info
-    secrole = get_default_security_role()
+    secrole = tdx.get_default_security_role()
     secroleid = secrole['ID']
 
     #get employee group info
-    emp_group = get_group_by_name(config.tdx_group_name_employee)
+    emp_group = tdx.get_group_by_name(config.tdx_group_name_employee)
     emp_groupid = emp_group['ID']
 
     #get employee acct/dept id
-    emp_acct = get_account_by_name(config.tdx_acct_name_employee)
+    emp_acct = tdx.get_account_by_name(config.tdx_acct_name_employee)
     emp_acct_id = emp_acct['ID']
 
     #get student acct/dept id
-    stu_acct = get_account_by_name(config.tdx_acct_name_student)
+    stu_acct = tdx.get_account_by_name(config.tdx_acct_name_student)
     stu_acct_id = stu_acct['ID']
 
     #get people custom attributes
-    people_attrs = get_custom_attributes_for_people()
+    people_attrs = tdx.get_custom_attributes_for_people()
 
     # connect to database
     with pymssql.connect(server=config.server,user=config.user,password=config.password,database=config.database) as conn:
@@ -186,7 +183,7 @@ try:
                 # Quirk alert: Work postal despite no longer being required in an import file is still 
                 # required when adding a user via the API. So we must set this for both students and employees.
                 user.workpostal = row['Work Postal Code']
-                
+
                 user.authusername = row['Authentication Username']
                 user.securityrole = secroleid
                 user.workaddress = row['Work Address']
@@ -198,7 +195,7 @@ try:
 
                      #get reports to user
                     if row['Reports To Username']:
-                        rep_user = get_user_by_username(row['Reports To Username'])
+                        rep_user = tdx.get_user_by_username(row['Reports To Username'])
                         if rep_user is not None:
                             user.reportsto = rep_user['ID']
                     user.accountid = emp_acct_id
@@ -207,14 +204,13 @@ try:
                     user.isemployee = False
                     user.accountid = stu_acct_id
 
-                user.attributes = get_custom_attributes_for_user(people_attrs, row["Is Student"], row["Department ID"])
-                print 'Processing user ' + user.primaryemail
+                user.attributes = tdx.build_custom_attributes_for_user(people_attrs, row["Is Student"], row["Department ID"])
+                logger.info('Processing user ' + user.primaryemail)
+
                 #print user.attributes
                 
                 try:    
-                    result = td_conn.json_request(method='post',
-                                            url_stem='people',
-                                            data=user.dictify())
+                    result = tdx.add_user(user)
 
                     #for k,v in result.iteritems():
                     #    print k,v
@@ -223,7 +219,7 @@ try:
                     uid = result['UID']
 
                     if user.isemployee:
-                        add_user_to_group(uid, emp_groupid)
+                        tdx.add_user_to_group(uid, emp_groupid)
                 except Exception as e:
                     #log this user error but don't bomb out other user additions
                     logger.exception("Error adding user {}: ".format(user.primaryemail) + str(e))

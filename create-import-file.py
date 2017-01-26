@@ -6,6 +6,7 @@ import logging
 import tdapi
 import os
 
+from modules.tdx import TDX
 import config
 
 logger = logging.getLogger(__name__)
@@ -97,7 +98,7 @@ try:
                     sql_query = "SELECT * FROM vw_Students WHERE [Last Name] LIKE '[{}]%' ORDER BY [Last Name] asc".format(config.user_splits_student[user_split])
                 else:
                     sql_query = "SELECT * FROM vw_Students"
-                #print sql_query
+
                 cursor.execute(sql_query)
 
             # process the data
@@ -152,8 +153,6 @@ try:
                 write_row += 1
 
 except Exception as e:
-    #print "Error ", sys.exc_info()[0].message
-    #print "Error: ", e.args[0]
     logger.exception("Error connecting to db or writing to worksheet")
 
 workbook.close()
@@ -163,29 +162,15 @@ if args.dry is not None and args.dry is False:
     #print 'Uploading file...'
 
     try:
-        # create file handle (read, binary)
-        xlsx_fh = open(file_name, 'rb')
+        tdx = TDX()
 
-        # create TDX connection
-        td_conn = tdapi.TDConnection(BEID=config.tdx_web_services_beid,
-                                    WebServicesKey=config.tdx_web_services_key,
-                                    sandbox=config.tdx_web_use_sandbox,
-                                    url_root=config.tdx_web_api_root)
-        tdapi.TD_CONNECTION = td_conn
+        #upload file
+        tdx.upload_file(file_name)
 
-        #print dir(tdapi.TD_CONNECTION)
-        
-        files = {file_name: (file_name,
-                                xlsx_fh,
-                                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        )}
-
-        td_conn.files_request(method='post',
-                            url_stem='people/import',
-                            files=files)
     except Exception as e:
-        logger.exception("Error connecting to TeamDynamix and/or writing file to endpoint")
+        logger.exception("Error connecting to TeamDynamix and/or writing file to endpoint: " + str(e))
 
+# if not keeping file, delete
 if args.keepfile is not None and args.keepfile is False:
     try:
         os.remove(file_name)
