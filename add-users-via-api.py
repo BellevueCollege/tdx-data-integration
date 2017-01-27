@@ -197,7 +197,7 @@ try:
                     if row['Reports To Username']:
                         rep_user = tdx.get_user_by_username(row['Reports To Username'])
                         if rep_user is not None:
-                            user.reportsto = rep_user['ID']
+                            user.reportsto = rep_user['UID']
                     user.accountid = emp_acct_id
 
                 else:
